@@ -1,0 +1,63 @@
+DIN DESK 0.1.0-beta.18 · WINDOWS x64
+
+1. Giải nén toàn bộ ZIP vào một thư mục bạn muốn giữ lại.
+2. Mở DinDesk.exe. Không cần cài Rust, .NET hay quyền Administrator.
+3. Đăng nhập tại muse.ai bằng trình duyệt của bạn.
+4. Trong Din Desk, bấm “Cách lấy cookie”, làm theo hướng dẫn, dán cookie.
+5. Bấm “Lưu & kết nối”. Đợi trạng thái “Đã kết nối Muse”.
+6. Chọn thư mục dự án, bấm “Mở Claude Code”.
+
+CLAUDE CODE
+Gemini Web: Tài khoản -> Thêm -> chọn Gemini Web; dán Cookie có __Secure-1PSID
+và __Secure-1PSIDTS nếu có, lấy từ Network của gemini.google.com/app khi đã đăng nhập.
+Chọn tài khoản -> Kết nối -> Mở Claude Code. Tài khoản Muse cũ giữ nguyên.
+Mỗi lúc chỉ một backend chạy. Đổi acc thì mở phiên Claude mới để không lẫn lịch sử.
+Chọn acc Gemini → Model / tư duy để chọn số tài khoản Google, model và mức tư duy.
+URL /u/5/app tương ứng số 5; cookie có thể chứa nhiều tài khoản Google.
+Danh sách lấy từ quyền của acc; model khóa không thể lưu. Lưu xong kết nối lại
+và mở phiên Claude mới. Không chọn model thì dùng mặc định của Google.
+Nút Kiểm tra quota từng acc Gemini hiển thị % đã dùng trong 5 giờ/hàng tuần và
+giờ reset khi Google có dữ liệu; chỉ lấy khi bấm, không tự chạy nền hay tạo chat.
+Tích hợp Gemini chưa xác minh generation bằng tài khoản Google thật; có thể cần
+cập nhật khi Google thay đổi giao thức. Không tự fallback anonymous hoặc sang Muse.
+Claude Code cần được cài riêng. Nút “Cài Claude Code” mở hướng dẫn chính thức.
+Din Desk tự tìm Claude Code trên máy và truyền cấu hình riêng cho phiên đó.
+Không cần chỉnh PowerShell profile, biến môi trường hay API key bằng tay.
+Ứng dụng giữ nguyên cơ chế hỏi quyền công cụ của Claude Code.
+Tìm kiếm web dùng Exa MCP thay cho WebSearch tích hợp không tương thích Muse.
+Không cần API key Exa để bắt đầu; có giới hạn tần suất. Truy vấn tìm kiếm được
+gửi sang Exa khi dùng công cụ. Sau khi cập nhật, mở lại phiên Claude để nhận tool.
+
+KHI SỬ DỤNG
+Tài khoản Muse -> chọn acc -> Sửa: nhập proxy HTTP/HTTPS riêng cho acc nếu có.
+Ví dụ http://host:port hoặc http://user:password@host:port. Để trống = trực tiếp.
+Ký tự đặc biệt trong user/password cần URL-encode (ví dụ @ thành %40).
+Proxy dùng cho xác thực, chat/WebSocket và kiểm tra quota; lỗi thì không tự đi trực tiếp.
+Sửa proxy acc đang chạy sẽ dừng kết nối cũ; bấm Kết nối lại để áp dụng.
+SOCKS5 chưa hỗ trợ. Proxy không bảo đảm tài khoản không bị giới hạn/khóa.
+Giữ Din Desk chạy trong lúc dùng Claude Code. Đóng cửa sổ khi proxy đang chạy
+sẽ thu app xuống khay hệ thống. Nhấp đúp biểu tượng để mở lại. Chọn Thoát để
+dừng server. Khi cookie hết hạn, lấy cookie mới rồi Lưu & kết nối lại.
+Cài đặt nâng cao có nút tạo shortcut Desktop và xuất chẩn đoán.
+
+CẤU HÌNH VÀ DỮ LIỆU
+Cấu hình lưu ở %LOCALAPPDATA%\DinDesk\settings.protected, được mã hóa bằng
+Windows DPAPI cho tài khoản Windows hiện tại. Không chia sẻ cookie hoặc file
+cấu hình. Mỗi người cần tài khoản Muse riêng. Gói ZIP không chứa cookie/API key.
+API mặc định chỉ nghe localhost, cổng 3001. Nếu cổng bận, chọn cổng khác.
+Để gỡ: thoát app, xóa thư mục đã giải nén và shortcut. Nếu muốn xóa cả cấu hình,
+xóa thêm %LOCALAPPDATA%\DinDesk sau khi đã thoát ứng dụng.
+
+GIỚI HẠN BẢN BETA
+Kết nối tài khoản vẫn cần lấy cookie thủ công, chưa đăng nhập một nút.
+Tool calling qua prompt JSON, chưa phải API model native. Tốc độ tùy Muse.
+Context 256k là budget của client, không bảo đảm Muse cá nhân dùng hết được.
+Ảnh PNG/JPEG/GIF/WebP tối đa 2 MiB mỗi ảnh; tổng JSON request tối đa 4 MiB.
+Document/PDF/audio chưa hỗ trợ. API OpenAI/conversation cũ chưa có auth; app
+giữ server ở localhost. Không mở cổng proxy ra mạng bên ngoài.
+Bản này chưa có chữ ký số, tự cập nhật hay bộ cài hệ thống.
+Windows có thể hiển thị cảnh báo ứng dụng chưa nhận diện khi tải về.
+
+Chẩn đoán được lấy từ log server trong bộ nhớ và đã che cookie/key; xem lại
+nội dung trước khi chia sẻ. Không có cơ chế gửi telemetry tự động của Din Desk.
+Muse và Claude Code là các sản phẩm riêng; Din Desk không phải ứng dụng chính thức.
