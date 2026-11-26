@@ -1,8 +1,22 @@
-# Din Desk
+<h1 align="center">
+  <img src="docs/assets/dindesk-banner.png" alt="Din Desk" width="100%">
+</h1>
 
-Din Desk là ứng dụng Windows chạy proxy cục bộ cho Claude Code, Codex CLI và
-Claude Desktop qua tài khoản **Muse** hoặc **Gemini Web**. Mỗi tài khoản có
-cookie và cấu hình proxy riêng. Din Desk lưu cấu hình bằng Windows DPAPI.
+<p align="center">
+  Kết nối <strong>Muse</strong> và <strong>Gemini Web</strong> với các công cụ lập trình AI qua proxy cục bộ trên Windows.
+</p>
+
+<p align="center">
+  <a href="https://github.com/thanhdiner/din-desk/releases/download/v0.1.0-beta.26/DinDesk-0.1.0-beta.26-win-x64.zip"><img src="docs/assets/download-zip.svg" alt="Tải ZIP portable"></a>
+  <a href="https://github.com/thanhdiner/din-desk/releases/download/v0.1.0-beta.26/DinDesk.exe"><img src="docs/assets/download-exe.svg" alt="Tải DinDesk.exe"></a>
+  <a href="https://github.com/thanhdiner/din-desk/releases/tag/v0.1.0-beta.26"><img src="docs/assets/release-beta.svg" alt="Bản phát hành v0.1.0-beta.26"></a>
+</p>
+
+<p align="center">
+  <a href="docs/WINDOWS_RELEASE.md">Hướng dẫn Windows</a> ·
+  <a href="docs/CLAUDE_CODE.md">Claude Code</a> ·
+  <a href="docs/GEMINI_WEB.md">Gemini Web</a>
+</p>
 
 ## Tải Din Desk cho Windows
 
@@ -23,7 +37,9 @@ cookie và cấu hình proxy riêng. Din Desk lưu cấu hình bằng Windows DP
 3. Cài công cụ bạn muốn dùng, rồi mở từ tab **Bắt đầu** hoặc thiết lập CLI ở
    tab **Cài đặt**. Giữ Din Desk kết nối trong lúc sử dụng.
 
-[Hướng dẫn Windows](docs/WINDOWS_RELEASE.md) · [Thiết lập Gemini Web](docs/GEMINI_WEB.md)
+Mỗi tài khoản có cookie và cấu hình proxy riêng. Din Desk lưu cấu hình bằng Windows DPAPI.
+
+## Tích hợp
 
 **Claude Desktop trên Windows.** Kết nối tài khoản trong Din Desk, sau đó bấm
 **Bắt đầu → Mở Claude Desktop** một lần. Những lần sau, mở Claude Desktop trực

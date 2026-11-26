@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="152" height="36" viewBox="0 0 152 36" role="img" aria-labelledby="title">
+  <title id="title">Bản phát hành v0.1.0-beta.26</title>
+  <rect width="152" height="36" rx="8" fill="#F9D793"/>
+  <path d="M13 12h7l6 6-6 6-7-7zm3.5 3.5h.01" fill="none" stroke="#352207" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="35" y="18" dominant-baseline="central" fill="#352207" font-family="Segoe UI, sans-serif" font-size="13" font-weight="700">v0.1.0-beta.26</text>
+</svg>
