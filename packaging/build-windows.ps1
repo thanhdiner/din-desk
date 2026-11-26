@@ -1,4 +1,4 @@
-param([string]$Version = '0.1.0-beta.18')
+param([string]$Version = '0.1.0-beta.26')
 $ErrorActionPreference = 'Stop'
 $rootPath = Split-Path -Parent $PSScriptRoot
 $cargoRoot = Join-Path $env:USERPROFILE '.cargo'

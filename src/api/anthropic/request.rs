@@ -339,12 +339,24 @@ pub fn parse(value: Value) -> Result<Request, String> {
 /// The active backend is fixed at startup. A model mismatch never falls back
 /// to another provider, account, credential or remote conversation.
 pub fn parse_for_model(mut value: Value, model: &str) -> Result<Request, String> {
-    if value.get("model").and_then(Value::as_str) != Some(model) {
+    let requested = value.get("model").and_then(Value::as_str);
+    let desktop_alias = match model {
+        "muse" => Some("claude-dindesk-muse"),
+        "gemini" => Some("claude-dindesk-gemini"),
+        _ => None,
+    };
+    let is_desktop = desktop_alias.is_some() && requested == desktop_alias;
+    if requested != Some(model) && !is_desktop {
         return Err(format!(
             "This account serves only model {model}; select the matching backend"
         ));
     }
     if let Some(object) = value.as_object_mut() {
+        // Desktop enables extended thinking by default. These gateway routes
+        // return ordinary text and tool calls without a separate thinking stream.
+        if is_desktop {
+            object.remove("thinking");
+        }
         object.insert("model".into(), json!("muse"));
     }
     parse(value)

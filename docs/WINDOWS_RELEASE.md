@@ -1,13 +1,63 @@
-# Muse Desk cho Windows
+# Din Desk cho Windows
 
-**Trạng thái hiện tại:** giao diện đang được chỉnh và xem trước, chưa chốt bản
-phân phối. `target/desktop-preview-accounts/MuseDesk.exe` là bản UI mới; ZIP beta dưới
-đây chứa giao diện trước đó. Chỉ build lại ZIP sau khi hoàn tất phần xem trước.
+## Tải và chạy
 
-EXE xem trước hiện là **0.1.0-beta.18**, đã nhúng backend có sửa ACK, khôi phục
-JSON một lần trong cùng phiên và chặn retry request lỗi trong 60 giây. Runtime
-được giải nén theo phiên bản; cấu hình tài khoản DPAPI vẫn dùng thư mục cũ.
-Self-test app kiểm tra backend Muse/Gemini, proxy từng acc, server nhúng, quota và launcher Claude Code đã cài.
+Bản **v0.1.0-beta.26** chạy trên Windows 10/11 x64. EXE tích hợp Rust server và
+.NET runtime. Gói ZIP đi kèm hướng dẫn tiếng Việt và giấy phép thư viện.
+[Tải ZIP, EXE hoặc checksum từ GitHub](../README.md#tải-din-desk-cho-windows).
+
+1. Giải nén ZIP nếu đã tải gói portable, rồi mở `DinDesk.exe`.
+2. Vào **Tài khoản → Thêm**, chọn Muse hoặc Gemini Web và nhập cookie. Tab
+   **Hướng dẫn** có các bước lấy cookie cho từng dịch vụ.
+3. Lưu tài khoản và bấm **Kết nối**. Trong tab **Bắt đầu**, chọn thư mục dự án
+   rồi mở Claude Code, Codex hoặc Claude Desktop đã cài trên máy.
+
+Nút X thu Din Desk xuống khay hệ thống và giữ kết nối. Nhấp đúp biểu tượng
+khay để hiện lại cửa sổ. Chọn **Thoát** để dừng proxy. Cổng mặc định là
+`127.0.0.1:3001`; có thể đổi trong tab **Cài đặt**.
+
+## Setup Claude Code và Codex
+
+Tab **Cài đặt** có nút **Setup Claude Code**, **Setup Codex** và **Setup agy CLI**.
+Cài CLI tương ứng trước. Sau khi setup Claude Code hoặc Codex, mở PowerShell mới.
+`cy` mở Claude Code và `cx` mở Codex tại thư mục hiện tại. Nút mở CLI trên tab
+**Bắt đầu** dùng thư mục dự án đã chọn. Din Desk cần có tài khoản đang kết nối.
+
+Setup cập nhật profile Windows PowerShell 5.1 và PowerShell 7 của tài khoản
+Windows hiện tại, kèm bản sao `.dindesk-*.bak` cạnh mỗi profile đã sửa. Các phiên
+chạy qua Din Desk bỏ lời hỏi duyệt thao tác và chạy với quyền của tài khoản
+Windows hiện tại. Launcher lấy cổng, model, context và API key khi mở mỗi phiên.
+Codex gọi `/v1/responses` qua HTTP/SSE và dùng lịch sử, công cụ cục bộ của CLI.
+
+### Sao lưu và reset cấu hình CLI
+
+**Sao lưu cấu hình CLI** lưu cài đặt người dùng của Claude Code, Codex và agy,
+statusline agy và hai profile PowerShell vào file `.dindesk-backup` bạn chọn.
+**Khôi phục từ file** áp dụng lại trạng thái trong bản sao trên cùng tài khoản
+Windows. Bản sao được mã hóa bằng Windows DPAPI.
+Khi có bản gốc agy trước Setup, Din Desk lưu kèm để bạn vẫn có thể Reset sau khi khôi phục.
+
+**Reset cấu hình CLI** gỡ các khối `cy`/`cx` do Din Desk thêm và khôi phục cấu
+hình agy đã lưu trước Setup. Với Setup agy từ bản cũ, Din Desk dùng `settings.json.bak`
+nếu xác định được bản settings còn lưu. Bản cũ chưa lưu bản gốc của statusline.
+Mở PowerShell mới để áp dụng thay đổi `cy`/`cx`.
+
+## API key và ngày hết hạn
+
+API key đang lưu tiếp tục dùng được sau khi nâng cấp và khi chuyển tài khoản.
+Mặc định key có hiệu lực cho đến khi bấm **Đổi API key**. Để đặt hạn, chọn
+**Đặt ngày hết hạn**, nhập ngày giờ theo múi giờ Windows rồi bấm **Lưu cài đặt**.
+Khi quá hạn, proxy trả `401` cho yêu cầu mới. Bấm **Đổi API key** để tiếp tục.
+Nếu đã đến hạn, key mới mặc định không hết hạn hoặc dùng mốc tương lai đã chọn.
+
+Proxy do app khởi động yêu cầu `Authorization: Bearer <key>` hoặc `x-api-key`
+cho các route API, kể cả `/v1/chat/completions` và `/v1/conversations`. `/health`
+vẫn dùng để kiểm tra trạng thái. Sau khi đổi key, mở phiên `cy` hoặc `cx` mới để
+launcher lấy key mới, hoặc cập nhật key trong client cấu hình thủ công.
+
+Từ beta.20, bấm **Chọn file .env** trong **Cài đặt** và lưu tên biến đang dùng,
+mặc định là `MUSE_PROXY_API_KEY`. Sau khi đổi key, bấm **Cập nhật key vào .env**
+để thay giá trị của biến đã lưu. Key được ghi dưới dạng văn bản vào file bạn chọn.
 
 Beta.18 thêm model opt-in `gemini-decision` trên `/v1/messages`. Luồng này gọi
 Gemini Decision 1 để chọn đúng một hành động, sau đó Gemini 3.5 Flash-Lite sinh
@@ -70,8 +120,8 @@ Beta.10 có **Model / tư duy** ở tab Tài khoản: chọn số tài khoản G
 (`/u/5/app` → 5), tải danh sách model/quyền truy cập từ acc đó, rồi chọn mức tư
 duy. Model khóa không thể lưu. Số tài khoản được dùng cho model, quota và chat;
 cookie Google có thể chứa nhiều phiên đăng nhập, nên cookie đúng chưa đủ để xác
-định số acc. Đổi lựa chọn của acc đang chạy sẽ dừng kết nối và đổi API key, cần
-kết nối lại rồi mở Claude mới. Muse không đổi.
+định số acc. Đổi lựa chọn của acc đang chạy sẽ dừng kết nối. Kết nối lại rồi mở
+phiên Claude mới để áp dụng lựa chọn. API key của proxy được giữ nguyên.
 
 Beta.9 bật nút **Kiểm tra quota** cho Gemini Web: % đã dùng trong cửa sổ 5 giờ và
 hàng tuần, kèm giờ reset khi Google cung cấp. Chỉ gọi khi bấm, dùng đúng cookie/
@@ -122,15 +172,15 @@ báo chưa lấy được dữ liệu thay vì hiển thị 0% hoặc quota khô
 
 Chuyển acc dừng proxy của app, bật bằng cookie/node riêng, kiểm tra kết nối rồi
 mới lưu lựa chọn. Nếu thất bại, app thử phục hồi acc trước. Cache RAM bị xóa
-và mỗi acc có file `conversations-<id>.json` riêng. API key đổi khi chuyển acc:
-cửa sổ Claude cũ sẽ bị từ chối key để tránh tự gửi lịch sử của acc trước sang
-acc mới. Mở phiên Claude mới bằng nút trong app. Các file session cũ vẫn được
-giữ lại khi xóa acc khỏi danh sách, việc xóa acc chỉ xóa cookie/cấu hình acc.
+và mỗi acc có file `conversations-<id>.json` riêng. API key của proxy được giữ
+nguyên khi đổi tài khoản, cookie, proxy, model hoặc mức tư duy. Mở phiên Claude
+mới bằng nút trong app để giữ lịch sử riêng giữa các tài khoản. Các file session
+cũ vẫn được giữ lại khi xóa acc khỏi danh sách, việc xóa acc chỉ xóa cookie/cấu hình acc.
 
 Bản xem trước đã kiểm tra tự động migration, mã hóa nhiều acc, phân tách file
-session/API key, chuyển thành công và rollback khi lỗi. Giao diện đã kiểm tra
-thêm/sửa/xóa và lưu danh sách sau restart với acc thử; chưa xác minh chuyển
-qua lại giữa hai tài khoản Muse thật khác nhau.
+session theo tài khoản, giữ nguyên API key, chuyển thành công và rollback khi lỗi.
+Giao diện đã kiểm tra thêm/sửa/xóa và lưu danh sách sau restart với acc thử;
+chưa xác minh chuyển qua lại giữa hai tài khoản Muse thật khác nhau.
 
 Các trạng thái kết nối và lý do chưa mở được Claude hiện trên màn hình;
 trạng thái kết nối và lý do chưa mở được Claude hiện trên màn hình. Đã kiểm
@@ -139,45 +189,19 @@ bao gồm thu/phóng cửa sổ, lỗi thiếu cookie hiện tại chỗ và lư
 chưa có cookie. Giá trị đã lưu được giữ sau khi mở lại app. Chưa kiểm tra UI
 ở mức DPI khác. Chạy trực tiếp bản EXE xem trước để đánh giá giao diện.
 
-Bản `0.1.0-beta.1` là ứng dụng portable cho Windows 10/11 x64. Gói ZIP chứa
-`MuseDesk.exe`, hướng dẫn tiếng Việt và giấy phép thư viện. EXE đã kèm server
-Rust và .NET runtime; người dùng không cần cài công cụ lập trình hay chạy script.
-
-## Sử dụng
-
-1. Giải nén toàn bộ `dist/MuseDesk-0.1.0-beta.1-win-x64.zip` vào thư mục muốn giữ lại.
-2. Mở `MuseDesk.exe`, đăng nhập tài khoản của mình tại <https://muse.ai>.
-3. Bấm **Cách lấy cookie**, làm theo hướng dẫn, dán cookie vào app.
-4. Bấm **Lưu & kết nối**, đợi trạng thái **Đã kết nối Muse**.
-5. Chọn thư mục dự án và bấm **Mở Claude Code**.
-
-Claude Code cần cài riêng. Nút **Cài Claude Code** mở
-[hướng dẫn chính thức](https://code.claude.com/docs/en/setup). App truyền cấu
-hình proxy cho cửa sổ Claude vừa mở, không sửa PowerShell profile hay cấu hình
-Claude toàn máy, và giữ cơ chế hỏi quyền của Claude Code.
-
-Giữ app chạy trong lúc dùng Claude. Đóng cửa sổ khi proxy đang chạy sẽ thu app
-xuống khay hệ thống; nhấp đúp biểu tượng để mở lại. **Thoát** dừng server do app
-quản lý. Khi khởi động, app kiểm tra cổng và từ chối nếu đã có chương trình khác
-sử dụng, không dừng chương trình đó. Cổng mặc định `127.0.0.1:3001`.
-
-Trong **Cài đặt nâng cao** có thể đổi cổng, context budget, tự kết nối khi mở
-app, tạo shortcut Desktop và xuất chẩn đoán đã che cookie/key. Không tự chạy
-cùng Windows. Cookie hết hạn thì cập nhật cookie rồi kết nối lại.
-
 ## Dữ liệu trên máy
 
-`%LOCALAPPDATA%\MuseDesk` chứa:
+`%LOCALAPPDATA%\DinDesk` chứa các tệp sau.
 
 - `settings.protected`: cookie, khóa proxy và tùy chọn, mã hóa bằng Windows
   DPAPI cho tài khoản Windows hiện tại.
-- `runtime/0.1.0-beta.1/`: server và launcher được giải nén từ EXE, kiểm tra
-  SHA-256 trước khi sử dụng lại.
-- `conversations.json`: ánh xạ session, không chứa nội dung chat hay cookie.
+- `runtime/` và `cli/` chứa server và launcher được giải nén từ EXE.
+- `conversations-<id>.json` lưu ánh xạ session Muse. Gemini dùng tệp
+  `gemini-conversations-u<số>-<id>.json` theo chỉ số tài khoản Google.
 
-Không chia sẻ file cấu hình. Khi gửi bản ZIP cho người khác, gửi gói trong
-`dist`, mỗi người dùng tài khoản Muse riêng. Để gỡ, thoát app rồi xóa thư mục
-đã giải nén và shortcut. Xóa thêm `%LOCALAPPDATA%\MuseDesk` nếu muốn xóa cấu hình.
+Khi chia sẻ app, dùng gói ZIP từ GitHub Releases. Để gỡ, thoát app rồi xóa EXE
+hoặc thư mục đã giải nén và shortcut. Xóa thêm `%LOCALAPPDATA%\DinDesk` nếu muốn
+xóa cấu hình.
 
 ## Phạm vi bản beta
 
@@ -186,14 +210,12 @@ Không chia sẻ file cấu hình. Khi gửi bản ZIP cho người khác, gửi
   chưa nhận diện khi tải về.
 - Tool calling dùng prompt JSON; SSE của adapter Anthropic đệm tới khi kiểm
   tra JSON xong. Tốc độ phụ thuộc Muse, chưa tương đương API model native.
-- Context mặc định 256k là budget cho Claude Code; không xác nhận giới hạn
-  context thực tế của tài khoản Muse. Có thể chọn budget khác trong app.
+- Context mặc định 256k là budget cho Claude Code và Codex. Có thể chỉnh trong
+  app theo giới hạn thực tế của tài khoản đang kết nối.
 - PNG/JPEG/GIF/WebP tối đa 2 MiB mỗi ảnh; tổng JSON request tối đa 4 MiB.
   Chưa hỗ trợ PDF, document và audio.
-- Hai route Anthropic yêu cầu API key, các route OpenAI/conversation cũ chưa
-  có auth. Server chỉ bind localhost; không mở cổng ra mạng ngoài.
-- Muse Desk là ứng dụng thử nghiệm độc lập, không phải sản phẩm chính thức
-  của Muse hay Claude Code.
+- Din Desk chỉ mở proxy trên localhost và yêu cầu key cho các route API.
+- Din Desk là ứng dụng thử nghiệm độc lập.
 
 ## Build cho người phát triển
 
@@ -210,7 +232,7 @@ EXE self-contained, thu thập giấy phép từ Cargo và đúng .NET runtime p
 chạy kiểm tra offline rồi tạo ZIP và checksum SHA-256 trong `dist`.
 Không đọc hoặc đóng gói cấu hình tài khoản, `.local`, source hay build cache.
 
-Source giao diện nằm ở `desktop/MuseDesk`. Backend Rust và launcher terminal
+Source giao diện nằm ở `desktop/DinDesk`. Backend Rust và launcher terminal
 hiện có vẫn sử dụng độc lập được. CLI chat thử nghiệm đã được loại bỏ.
 
 ## Kiểm tra bản 0.1.0-beta.1

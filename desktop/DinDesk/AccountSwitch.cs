@@ -15,6 +15,7 @@ internal static class AccountSwitch
     public static async Task ApplyAsync(IAccountProxy proxy, Settings previous, Settings candidate, Action<Settings> save)
     {
         SettingsStore.Validate(candidate, requireCookie:true);
+        candidate.RequireValidApiKey();
         bool restore = proxy.Running;
         proxy.Stop();
         try

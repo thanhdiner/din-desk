@@ -20,20 +20,25 @@ internal static class AccountTests
     public static async Task RunAsync(string root, List<string> checks)
     {
         void Require(bool value,string error) { if(!value)throw new InvalidOperationException(error); }
-        var old=new Settings {Cookie="hatch_sess=account-one-secret", NodeId="legacy-node"};
+        var store = new SettingsStore(root);
+        string oldKey = store.Load().ApiKey;
+        var old = new SettingsStore(root).Load();
+        Require(old.ApiKey == oldKey, "Proxy API key changed before the first account was added");
+        old.Cookie = "hatch_sess=account-one-secret";
+        old.NodeId = "legacy-node";
         old.NormalizeAccounts();
         Require(old.Accounts.Count==1 && old.Accounts[0].Cookie==old.Cookie && old.Accounts[0].NodeId=="legacy-node","Legacy account migration failed");
         var next=old.Copy();
         var second=new MuseAccount {Name="Second",Cookie="hatch_sess=account-two-secret"};next.Accounts.Add(second);
-        string oldKey=next.ApiKey;next.SelectAccount(second.Id);
-        Require(next.Cookie==second.Cookie && next.NodeId==second.NodeId && next.ApiKey!=oldKey,"Account switch mixed credentials or retained old client key");
+        next.SelectAccount(second.Id);
+        Require(next.Cookie==second.Cookie && next.NodeId==second.NodeId && next.ApiKey==oldKey,"Account switch mixed credentials or changed the proxy key");
         Require(old.Accounts.Count==1 && old.Cookie!=next.Cookie,"Copy modified previous account");
         Require(ServerController.ConversationPath(root,old)!=ServerController.ConversationPath(root,next),"Account stores overlap");
-        var store=new SettingsStore(root);store.Save(next);var loaded=store.Load();
-        Require(loaded.Accounts.Count==2&&loaded.ActiveAccountId==second.Id&&loaded.Cookie==second.Cookie,"Encrypted accounts did not roundtrip");
+        store.Save(next);var loaded=store.Load();
+        Require(loaded.Accounts.Count==2&&loaded.ActiveAccountId==second.Id&&loaded.Cookie==second.Cookie&&loaded.ApiKey==oldKey,"Encrypted accounts or proxy key did not roundtrip");
         string cipher=System.Text.Encoding.UTF8.GetString(File.ReadAllBytes(Path.Combine(root,"settings.protected")));
         Require(!cipher.Contains("account-one-secret")&&!cipher.Contains("account-two-secret")&&!cipher.Contains(next.ApiKey),"Saved account secret was plaintext");
-        checks.Add("Account migration, independent credentials/stores, old client key revoked and DPAPI multi-account roundtrip");
+        checks.Add("Account migration, independent credentials/stores and stable proxy key across setup, switching and DPAPI reload");
         var proxy=new Proxy {OldId=old.ActiveAccountId};await proxy.StartAsync(old);
         Settings? saved=null;
         proxy.FailNew=true;
@@ -49,7 +54,8 @@ internal static class AccountTests
         rejected=false;try{SettingsStore.Validate(duplicate,false);}catch(ArgumentException){rejected=true;}
         Require(rejected,"Duplicate account labels accepted");
         var deleted=next.Copy();deleted.Accounts.RemoveAll(a=>a.Id==deleted.ActiveAccountId);deleted.ActiveAccountId=null;deleted.Cookie="";store.Save(deleted);
-        Require(store.Load().ActiveAccountId==null && store.Load().Cookie=="","Deleting active account reselected another account");
+        var afterDeletion = store.Load();
+        Require(afterDeletion.ActiveAccountId==null && afterDeletion.Cookie=="" && afterDeletion.ApiKey==oldKey,"Deleting active account reselected another account or changed the proxy key");
         checks.Add("Account switch success, rejection rollback, double-failure stop, duplicate names and active deletion");
     }
 }

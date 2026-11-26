@@ -6,47 +6,76 @@ namespace MuseDesk;
 
 internal static class AgyCliSetup
 {
+    internal const string SettingsFile = "agy-settings";
+    internal const string StatuslineFile = "agy-statusline";
     private const string SettingsResourceName = "MuseDesk.agy-settings.template.json";
     private const string StatuslineResourceName = "MuseDesk.agy-statusline.ps1";
+    private const string BaselineKind = "agy-before-setup";
 
     internal sealed record InstallResult(string SettingsPath, string StatuslinePath, string? BackupPath);
 
-    /// <summary>
-    /// Installs the bundled Antigravity CLI (agy) settings and custom statusline script
-    /// into the target Windows user profile directory.
-    /// </summary>
-    public static InstallResult Install(string userProfileDir)
+    internal static Dictionary<string, string> Paths(string userProfileDir)
     {
         if (string.IsNullOrWhiteSpace(userProfileDir))
             throw new ArgumentException("Không xác định được thư mục người dùng.");
-
         string fullProfile = Path.GetFullPath(userProfileDir);
-        string antigravityDir = Path.Combine(fullProfile, ".antigravity");
-        string cliConfigDir = Path.Combine(fullProfile, ".gemini", "antigravity-cli");
-        Directory.CreateDirectory(antigravityDir);
-        Directory.CreateDirectory(cliConfigDir);
+        return new()
+        {
+            [SettingsFile] = Path.Combine(fullProfile, ".gemini", "antigravity-cli", "settings.json"),
+            [StatuslineFile] = Path.Combine(fullProfile, ".antigravity", "agy-statusline.ps1")
+        };
+    }
 
-        string statuslinePath = Path.Combine(antigravityDir, "agy-statusline.ps1");
-        string settingsPath = Path.Combine(cliConfigDir, "settings.json");
-
-        WriteEmbeddedText(StatuslineResourceName, statuslinePath, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-
+    public static InstallResult Install(string userProfileDir, string? dataDirectory = null)
+    {
+        var paths = Paths(userProfileDir);
+        string settingsPath = paths[SettingsFile];
+        var original = ConfigBackup.Capture(paths);
+        var installed = Render(paths);
+        bool alreadyInstalled = IsInstalled(original[SettingsFile], installed[SettingsFile]);
+        if (dataDirectory != null && !alreadyInstalled && !File.Exists(BaselinePath(dataDirectory)))
+            ConfigBackup.Export(BaselinePath(dataDirectory), BaselineKind, original, overwrite: false);
         string? backupPath = null;
-        if (File.Exists(settingsPath))
+        if (original[SettingsFile] is { } previous && (dataDirectory == null || !alreadyInstalled))
         {
             backupPath = settingsPath + ".bak";
-            File.Copy(settingsPath, backupPath, overwrite: true);
+            ConfigBackup.WriteAtomic(backupPath, previous, overwrite: true);
         }
-
-        string template = ReadEmbeddedText(SettingsResourceName);
-        string portableStatuslinePath = statuslinePath.Replace('\\', '/');
-        string renderedSettings = template.Replace("{{STATUSLINE_PATH}}", portableStatuslinePath, StringComparison.Ordinal);
-
-        using (JsonDocument.Parse(renderedSettings)) { }
-        File.WriteAllText(settingsPath, renderedSettings, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-
-        return new InstallResult(settingsPath, statuslinePath, backupPath);
+        ConfigBackup.Apply(paths, original, installed);
+        return new InstallResult(settingsPath, paths[StatuslineFile], backupPath);
     }
+
+    internal static string BaselinePath(string dataDirectory) => Path.Combine(dataDirectory, "agy-before-setup.protected");
+
+    internal static Dictionary<string, byte[]?>? BeforeSetup(string dataDirectory, IReadOnlyDictionary<string, string> paths,
+        Dictionary<string, byte[]?> current, out bool incompleteLegacy)
+    {
+        incompleteLegacy = false;
+        string baselinePath = BaselinePath(dataDirectory);
+        if (File.Exists(baselinePath)) return ConfigBackup.Import(baselinePath, BaselineKind, paths.Keys);
+
+        var installed = Render(paths);
+        if (!IsInstalled(current[SettingsFile], installed[SettingsFile])) return null;
+        incompleteLegacy = true;
+        byte[]? previous = ConfigBackup.ReadIfPresent(paths[SettingsFile] + ".bak");
+        if (previous == null || IsInstalled(previous, installed[SettingsFile])) return null;
+        return new() { [SettingsFile] = previous };
+    }
+
+    private static Dictionary<string, byte[]?> Render(IReadOnlyDictionary<string, string> paths)
+    {
+        string template = ReadEmbeddedText(SettingsResourceName);
+        string portableStatuslinePath = paths[StatuslineFile].Replace('\\', '/');
+        string renderedSettings = template.Replace("{{STATUSLINE_PATH}}", portableStatuslinePath, StringComparison.Ordinal);
+        using (JsonDocument.Parse(renderedSettings)) { }
+        return new()
+        {
+            [SettingsFile] = Encoding.UTF8.GetBytes(renderedSettings),
+            [StatuslineFile] = Encoding.UTF8.GetBytes(ReadEmbeddedText(StatuslineResourceName))
+        };
+    }
+
+    private static bool IsInstalled(byte[]? current, byte[]? template) => current != null && template != null && current.AsSpan().SequenceEqual(template);
 
     private static string ReadEmbeddedText(string resourceName)
     {
@@ -54,11 +83,5 @@ internal static class AgyCliSetup
             ?? throw new InvalidOperationException($"Thiếu tài nguyên nhúng: {resourceName}");
         using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
         return reader.ReadToEnd();
-    }
-
-    private static void WriteEmbeddedText(string resourceName, string destinationPath, Encoding encoding)
-    {
-        string content = ReadEmbeddedText(resourceName);
-        File.WriteAllText(destinationPath, content, encoding);
     }
 }

@@ -1,7 +1,7 @@
 //! Anthropic Messages adapter for Claude Code. Prompt-based tools are opt-in
 //! through this endpoint; existing OpenAI chat semantics remain separate.
 pub(super) mod request;
-mod response;
+pub(super) mod response;
 mod session;
 #[cfg(test)]
 mod tests;
@@ -19,7 +19,7 @@ use serde_json::{json, Value};
 use tokio::sync::oneshot;
 
 use crate::{
-    core::{agent::MAX_CONTEXT_BYTES, agent_sessions::AgentSessions},
+    core::{agent::{AgentReply, PreparedRequest, MAX_CONTEXT_BYTES}, agent_sessions::AgentSessions},
     ports::{AgentInference, TextGenerator},
 };
 
@@ -36,11 +36,12 @@ pub(super) fn router(state: AgentState) -> Router {
     Router::new()
         .route("/v1/messages", post(messages))
         .route("/v1/messages/count_tokens", post(count_tokens))
+        .route("/v1/responses", post(super::responses::handle))
         .layer(DefaultBodyLimit::max(MAX_CONTEXT_BYTES))
         .with_state(state)
 }
 
-struct ApiError(StatusCode, &'static str, &'static str);
+pub(super) struct ApiError(StatusCode, &'static str, &'static str);
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
@@ -48,24 +49,15 @@ impl IntoResponse for ApiError {
     }
 }
 
-fn authorize(headers: &HeaderMap, state: &AgentState) -> Result<(), ApiError> {
+pub(super) fn authorize(headers: &HeaderMap, state: &AgentState) -> Result<(), ApiError> {
     let Some(expected) = state.api_key.as_deref().filter(|key| !key.is_empty()) else {
         return Err(ApiError(
             StatusCode::SERVICE_UNAVAILABLE,
             "api_error",
-            "Set MUSE_PROXY_API_KEY on the server to enable the Anthropic adapter",
+            "Set MUSE_PROXY_API_KEY on the server to enable this adapter",
         ));
     };
-    let bearer = headers
-        .get("authorization")
-        .and_then(|h| h.to_str().ok())
-        .and_then(|h| h.strip_prefix("Bearer "));
-    let key = headers.get("x-api-key").and_then(|h| h.to_str().ok());
-    if ![bearer, key]
-        .into_iter()
-        .flatten()
-        .any(|provided| constant_time_equal(provided.as_bytes(), expected.as_bytes()))
-    {
+    if !super::proxy_auth::matches_key(headers, expected) {
         return Err(ApiError(
             StatusCode::UNAUTHORIZED,
             "authentication_error",
@@ -79,14 +71,6 @@ pub(super) fn authorization_error(headers: &HeaderMap, state: &AgentState) -> Op
     authorize(headers, state)
         .err()
         .map(IntoResponse::into_response)
-}
-
-fn constant_time_equal(left: &[u8], right: &[u8]) -> bool {
-    let mut difference = left.len() ^ right.len();
-    for (index, byte) in right.iter().enumerate() {
-        difference |= usize::from(left.get(index).copied().unwrap_or(0) ^ byte);
-    }
-    difference == 0
 }
 
 fn stamp(mut response: Response) -> Response {
@@ -207,7 +191,6 @@ pub(super) async fn messages_inner(
             "The selected backend is not configured; connect its account in Muse Desk",
         );
     }
-    let generator = state.generator;
     let prepared = match request.agent.prepare() {
         Ok(prepared) => prepared,
         Err(error) => {
@@ -216,34 +199,8 @@ pub(super) async fn messages_inner(
     };
     let id = format!("msg_{}", uuid::Uuid::new_v4().simple());
     let input_tokens = prepared.input_tokens;
-    let (mut sender, receiver) = oneshot::channel();
-    // Bounded wait for session creation + inference. Disconnect drops infer,
-    // which closes the adapter channel; no client tool runs inside this server.
     let decision_mode = decision.is_some();
-    tokio::spawn(async move {
-        let inference = async {
-            if let Some(decision) = decision {
-                decision.infer(&prepared).await
-            } else {
-                state
-                    .sessions
-                    .infer(
-                        generator.expect("checked generator"),
-                        prepared,
-                        client.as_deref(),
-                    )
-                    .await
-            }
-        };
-        tokio::select! {
-            _ = sender.closed() => {},
-            result = tokio::time::timeout(Duration::from_secs(180),inference) => {
-                let result = result.unwrap_or_else(|_| Err("Muse agent request timed out".into()));
-                if result.is_err() { tracing::warn!("Muse agent inference failed; no client tools dispatched"); }
-                let _ = sender.send(result);
-            }
-        }
-    });
+    let receiver = spawn_inference(state, decision, prepared, client);
     let mut response = if request.stream {
         response::sse_model(receiver, &id, input_tokens, model)
     } else {
@@ -270,4 +227,32 @@ pub(super) async fn messages_inner(
         );
     }
     response
+}
+
+pub(super) fn spawn_inference(
+    state: AgentState,
+    decision: Option<Arc<dyn AgentInference>>,
+    prepared: PreparedRequest,
+    client: Option<String>,
+) -> oneshot::Receiver<Result<AgentReply, String>> {
+    let (mut sender, receiver) = oneshot::channel();
+    tokio::spawn(async move {
+        let inference = async {
+            if let Some(decision) = decision {
+                decision.infer(&prepared).await
+            } else {
+                state.sessions.infer(state.generator.expect("checked generator"), prepared, client.as_deref()).await
+            }
+        };
+        // The response owns the receiver, so a disconnected client cancels inference.
+        tokio::select! {
+            _ = sender.closed() => {},
+            result = tokio::time::timeout(Duration::from_secs(180), inference) => {
+                let result = result.unwrap_or_else(|_| Err("Muse agent request timed out".into()));
+                if result.is_err() { tracing::warn!("Muse agent inference failed; no client tools dispatched"); }
+                let _ = sender.send(result);
+            }
+        }
+    });
+    receiver
 }

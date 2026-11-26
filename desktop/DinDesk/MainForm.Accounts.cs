@@ -138,7 +138,6 @@ internal sealed partial class MainForm
         // Editing an active credential stops its owned process so the UI cannot
         // claim the old connection is using the newly saved cookie.
         bool credentialChanged=old!=null && old.Id==settings.ActiveAccountId && (old.Cookie!=edited.Cookie || old.ProxyUrl!=edited.ProxyUrl);
-        if(credentialChanged)candidate.ApiKey=Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
         store.Save(candidate);
         if(credentialChanged) {server.Stop();verified=false;}
         if(old!=null && (old.Cookie!=edited.Cookie || old.ProxyUrl!=edited.ProxyUrl)) { quotas.Remove(old.Id); quotaErrors.Remove(old.Id); }
@@ -157,7 +156,6 @@ internal sealed partial class MainForm
             bool changed=edited.GeminiAccountIndex!=dialog.AccountIndex || edited.GeminiModelId!=dialog.ModelId || edited.GeminiThinkingId!=dialog.ThinkingId;
             edited.GeminiAccountIndex=dialog.AccountIndex;edited.GeminiModelId=dialog.ModelId;edited.GeminiThinkingId=dialog.ThinkingId;
             edited.GeminiModelName=dialog.ModelName;edited.GeminiThinkingName=dialog.ThinkingName;
-            if(changed && account.Id==settings.ActiveAccountId)candidate.ApiKey=Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
             store.Save(candidate);
             if(changed && account.Id==settings.ActiveAccountId){server.Stop();verified=false;}
             if(account.GeminiAccountIndex!=dialog.AccountIndex){quotas.Remove(account.Id);quotaErrors.Remove(account.Id);}

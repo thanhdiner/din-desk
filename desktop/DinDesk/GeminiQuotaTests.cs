@@ -182,6 +182,13 @@ internal static class GeminiQuotaTests
                             || !detail.Text.Contains("Hàng tuần: 4%") || grid.Rows[0].Cells["Quota"].Value?.ToString() != "Chưa kiểm tra")
                             throw new InvalidOperationException("Gemini quota UI mixed results or switched active account");
                         checks.Add("Gemini account row button handles click/double click, pending and 5-hour/weekly result without fetching on selection or switching active Muse");
+                        form.Close();
+                        if (form.Visible || form.IsDisposed) throw new InvalidOperationException("Closing Din Desk while idle did not keep it in the tray");
+                        form.RestoreWindow();
+                        if (!form.Visible) throw new InvalidOperationException("Din Desk did not reopen from the tray");
+                        form.Controls.Find("Thoát ứng dụng", true).OfType<Button>().Single().PerformClick();
+                        if (!form.IsDisposed) throw new InvalidOperationException("Explicit exit did not close Din Desk");
+                        checks.Add("Closing the idle window keeps Din Desk in the tray, restore shows it and explicit exit disposes it");
                         completed.TrySetResult();
                     }
                     catch (Exception error) { completed.TrySetException(error); }

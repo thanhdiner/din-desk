@@ -15,6 +15,18 @@ use crate::{
 const KEY: &str = "test-key-only";
 
 #[test]
+fn desktop_routes_accept_default_thinking_only_for_the_active_backend() {
+    for (model, other) in [("muse", "gemini"), ("gemini", "muse")] {
+        let mut body = json!({"model":format!("claude-dindesk-{model}"), "max_tokens":32,
+            "messages":[{"role":"user","content":"hello"}],"thinking":{"type":"adaptive"}});
+        assert!(request::parse_for_model(body.clone(), model).is_ok());
+        assert!(request::parse_for_model(body.clone(), other).is_err());
+        body["model"] = json!(model);
+        assert!(request::parse_for_model(body, model).is_err());
+    }
+}
+
+#[test]
 fn decision_quota_and_nonretryable_failures_have_explicit_http_statuses() {
     use axum::http::StatusCode;
     assert_eq!(

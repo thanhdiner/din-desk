@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace MuseDesk;
 
@@ -17,13 +18,32 @@ internal sealed class Settings
     public string GeminiThinkingId { get; set; } = "";
     public string ModelId => Provider switch {"gemini"=>"gemini",_=>"muse"};
     public string NodeId { get; set; } = "musedesk-" + Guid.NewGuid().ToString("N");
-    public string ApiKey { get; set; } = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+    [JsonInclude]
+    public string ApiKey { get; private set; } = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+    public DateTimeOffset? ApiKeyExpiresAt { get; set; }
+    public string? EnvKeyFilePath { get; set; }
+    public string EnvKeyVariable { get; set; } = EnvKeyFile.DefaultVariable;
     public int Port { get; set; } = 3001;
     public int ContextTokens { get; set; } = 256000;
     public string ProjectFolder { get; set; } = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
     public bool AutoStart { get; set; }
 
     public Settings Copy() => JsonSerializer.Deserialize<Settings>(JsonSerializer.Serialize(this))!;
+
+    public bool IsApiKeyExpired(DateTimeOffset now) => ApiKeyExpiresAt is { } expiry && expiry <= now;
+
+    public void RequireValidApiKey()
+    {
+        if (IsApiKeyExpired(DateTimeOffset.UtcNow))
+            throw new InvalidOperationException("API key đã hết hạn. Vào Cài đặt và bấm Đổi API key.");
+    }
+
+    public void RotateApiKey(DateTimeOffset now)
+    {
+        ApiKey = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+        if (IsApiKeyExpired(now)) ApiKeyExpiresAt = null;
+    }
+
     public void NormalizeAccounts()
     {
         if (Accounts.Count == 0 && !string.IsNullOrWhiteSpace(Cookie))
@@ -50,7 +70,6 @@ internal sealed class Settings
             ActiveAccountId = null;
             Cookie = ProxyUrl = "";
             Provider = "muse";
-            ApiKey = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
             AutoStart = false;
         }
         return removed > 0 || activeRetired;
@@ -58,7 +77,6 @@ internal sealed class Settings
     public void SelectAccount(string id)
     {
         if (!Accounts.Any(a => a.Id == id)) throw new ArgumentException("Không tìm thấy tài khoản.");
-        if(ActiveAccountId!=id) ApiKey=Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
         ActiveAccountId = id; NormalizeAccounts();
     }
 }
@@ -98,7 +116,12 @@ internal sealed class SettingsStore(string directory)
                 File.Copy(legacyFile, FilePath, overwrite: false);
             }
         }
-        if (!File.Exists(FilePath)) return new Settings();
+        if (!File.Exists(FilePath))
+        {
+            var initialSettings = new Settings();
+            Save(initialSettings);
+            return initialSettings;
+        }
         byte[] plain = WindowsSecrets.Unprotect(File.ReadAllBytes(FilePath));
         try
         {
@@ -123,6 +146,7 @@ internal sealed class SettingsStore(string directory)
     public void Save(Settings settings)
     {
         settings.NormalizeAccounts();
+        settings.ApiKeyExpiresAt = settings.ApiKeyExpiresAt?.ToUniversalTime();
         Validate(settings, requireCookie: false);
         Directory.CreateDirectory(DirectoryPath);
         byte[] plain = JsonSerializer.SerializeToUtf8Bytes(settings);

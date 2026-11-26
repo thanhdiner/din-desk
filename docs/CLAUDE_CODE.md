@@ -6,18 +6,37 @@ cho đường gọi inference này; vẫn cần cookie Muse hợp lệ và Claud
 
 ## Chạy
 
-Nếu dùng **Muse Desk**, mở app và kết nối tài khoản trước, rồi chạy từ thư mục
-dự án muốn làm việc:
+### Claude Desktop trên Windows
+
+1. Cài Claude Desktop. Trong Din Desk, vào **Bắt đầu → Kết nối tài khoản**, thêm
+   tài khoản Muse hoặc Gemini Web rồi bấm **Lưu & kết nối**.
+2. Khi Din Desk báo **Đã kết nối**, vào **Bắt đầu → Mở Claude Desktop**. Nút này
+   lưu profile gateway với key, cổng và model hiện tại rồi mở tab **Code**.
+   Nếu Claude Desktop đang dùng cấu hình cũ, thoát hẳn Desktop rồi bấm lại.
+   Desktop có thể hỏi xác nhận thư mục dự án.
+3. Từ lần sau, mở **Claude Desktop** trực tiếp từ menu Start rồi vào tab **Code**.
+   Profile đã được lưu. Giữ Din Desk chạy và kết nối tài khoản trong lúc sử dụng.
+
+Sau khi đổi **API key**, **cổng proxy** hoặc chuyển **Muse ↔ Gemini**, bấm lại
+**Mở Claude Desktop** trong Din Desk để cập nhật profile. Nếu Desktop đang chạy,
+thoát hẳn rồi mở lại để nhận cấu hình mới.
+
+Model trong giao diện mang tên DinDesk Muse hoặc DinDesk Gemini. Route Desktop trả văn bản và tool call, bỏ qua yêu cầu extended thinking.
+
+### Claude Code CLI
+
+Trong **Din Desk**, kết nối tài khoản rồi bấm **Mở Claude Code** ở tab **Bắt đầu**.
+Để dùng từ terminal, bấm **Setup Claude Code** trong **Cài đặt**, mở PowerShell
+mới rồi chạy từ thư mục dự án:
 
 ```powershell
-& 'F:\All Project\muse-api-rust\claude-muse.ps1' -MuseDesk
+cy
 ```
 
-Chế độ này đọc cổng và API key hiện tại từ cấu hình DPAPI của app, kiểm tra đúng
-process Muse Desk đang giữ cổng rồi mới gửi key. Không dùng key cũ trong biến
-môi trường Windows, không sửa key toàn cục và không gửi cookie sang Claude.
-Lệnh `cy` trên máy phát triển gọi chế độ này; giữ Muse Desk chạy trong lúc dùng.
-Sau khi chuyển tài khoản, mở một phiên Claude mới để dùng key/ngữ cảnh mới.
+Launcher lấy cổng, model, context và API key hiện tại từ cấu hình DPAPI của app.
+Giữ Din Desk chạy khi dùng `cy`. API key của proxy được giữ nguyên khi chuyển
+tài khoản. Mở phiên Claude mới sau khi chuyển để dùng đúng model và giữ lịch sử
+riêng giữa các tài khoản.
 
 Để tương thích terminal đang giữ hàm `cy` cũ: nếu preflight nhận 401 tại đúng
 endpoint loopback do Muse Desk sở hữu, launcher thử lại một lần bằng cấu hình
@@ -221,8 +240,8 @@ structured output, assistant prefill, custom stop và server context management
 chưa hỗ trợ; các yêu cầu đó trả 400. Schema chỉ được tham chiếu local `#`, không
 fetch schema từ mạng hoặc filesystem.
 
-API key mới **chỉ bảo vệ hai endpoint Anthropic**. Các route OpenAI/conversation
-cũ vẫn chưa có auth; giữ toàn bộ server trên localhost như trước.
+Din Desk yêu cầu API key cho các route API localhost, gồm Anthropic Messages,
+Responses, Chat Completions và conversation. Xem [quản lý key và ngày hết hạn](WINDOWS_RELEASE.md#api-key-và-ngày-hết-hạn).
 
 ## Kiểm chứng
 

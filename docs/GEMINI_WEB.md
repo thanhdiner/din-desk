@@ -22,8 +22,8 @@ qua chat. App không tự đọc cookie từ Chrome hay hồ sơ trình duyệt.
 
 Danh sách cũ mặc định vẫn là Muse, không mất tài khoản/cookie/proxy. Một tài khoản
 chỉ có một nguồn; để đổi nguồn hãy thêm tài khoản mới. Mỗi lúc chỉ có một backend
-hoạt động. Đổi tài khoản thay API key, bỏ session/socket/cache đang chạy và khởi
-tạo bằng cookie/proxy của tài khoản mới. Mở phiên Claude mới sau khi chuyển.
+hoạt động. Khi đổi tài khoản, proxy giữ nguyên API key và khởi động lại bằng
+cookie/proxy của tài khoản mới. Mở phiên Claude mới sau khi chuyển.
 Không dùng `--resume` hội thoại Muse để chuyển nguyên lịch sử sang Google, trừ
 khi bạn chủ động muốn gửi lịch sử đó sang Gemini.
 
@@ -51,8 +51,8 @@ Backend truyền selector qua `x-goog-ext-525001261-jspb` và field model/thinki
 của StreamGenerate; không thêm chỉ thị suy nghĩ vào prompt hay tự đổi model khi
 lỗi. Khi chọn model cụ thể, quyền được kiểm tra khi kết nối và cache tối đa 15
 phút giữa các lượt; không tải catalog mỗi request. Lưu thay đổi của acc đang chạy
-dừng server và đổi API key: mở lại Claude để nhận cấu hình. Client không tự đổi
-upstream bằng `/model`; alias vẫn là `gemini` cho main và subagent.
+dừng server. Kết nối lại và mở phiên Claude mới để áp dụng lựa chọn. Client không
+tự đổi upstream bằng `/model`; alias vẫn là `gemini` cho main và subagent.
 
 Mode policy mới dùng category + routing variant (header field 25), còn model
 catalog cũ dùng hash; không đưa chuỗi `argon` vào chỗ hash như model cũ. Mức tư

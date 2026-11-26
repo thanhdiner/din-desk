@@ -20,9 +20,10 @@ internal static class SmokeTests
         var result = new { version = Program.Version, success = failure == null, checks, failure };
         if (report != null) File.WriteAllText(report, JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
         // Exact test-owned files only, no recursive computed deletion.
-        foreach (string path in new[] { Path.Combine(root, "settings.protected"), Path.Combine(root, "claude.ps1"), Path.Combine(root, "gemini-launcher.json"), Path.Combine(root, "launcher-capture.json"), Path.Combine(root, "runtime", Program.Version, "muse-api.exe"), Path.Combine(root, "runtime", Program.Version, "claude-muse.ps1") })
+        foreach (string path in new[] { Path.Combine(root, "settings.protected"), Path.Combine(root, "claude.ps1"), Path.Combine(root, "gemini-launcher.json"), Path.Combine(root, "launcher-capture.json"), Path.Combine(root, "runtime", Program.Version, "muse-api.exe") }
+            .Concat(RuntimeFiles.CliFiles.SelectMany(name => new[] { Path.Combine(root, "runtime", Program.Version, name), Path.Combine(root, "cli", name) })))
             if (File.Exists(path)) File.Delete(path);
-        foreach (string path in new[] { Path.Combine(root, "runtime", Program.Version), Path.Combine(root, "runtime"), root })
+        foreach (string path in new[] { Path.Combine(root, "runtime", Program.Version), Path.Combine(root, "runtime"), Path.Combine(root, "cli"), root })
             if (Directory.Exists(path) && !Directory.EnumerateFileSystemEntries(path).Any()) Directory.Delete(path);
         return failure == null ? 0 : 1;
     }
@@ -38,6 +39,9 @@ internal static class SmokeTests
         await GeminiQuotaTests.RunAsync(root,checks);
         await GeminiModelTests.RunAsync(root,checks);
         RetiredProviderTests.Run(root,checks);
+        await ProxyKeyTests.RunAsync(root, checks);
+        EnvKeyTests.Run(root, checks);
+        CliConfigurationTests.Run(root, checks);
         var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start();
         int port = ((IPEndPoint)listener.LocalEndpoint).Port; listener.Stop();
         var settings = new Settings { Cookie = "datr=fixture; ps_l=0; ps_n=1; hatch_sess=fixture-private-cookie", Port = port };
@@ -112,6 +116,7 @@ internal static class SmokeTests
         File.Delete(Path.Combine(root, "claude.ps1"));
         File.Delete(capture);
         checks.Add("Bundled launcher uses web search MCP, excludes native WebSearch, preserves args/cwd and cleans temporary config");
+        await CliSetupTests.RunAsync(root, settings, checks);
         if (withClaude)
         {
             settings.ProjectFolder = root;

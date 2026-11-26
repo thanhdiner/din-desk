@@ -23,6 +23,7 @@ internal sealed class ServerController(string dataDirectory) : IDisposable, IAcc
     public async Task StartAsync(Settings settings)
     {
         SettingsStore.Validate(settings, requireCookie: true);
+        settings.RequireValidApiKey();
         if (Running) throw new InvalidOperationException("Proxy đang chạy. Dừng proxy trước khi thay cấu hình.");
         Stop();
         // Do not adopt or stop an unrelated listener, including the developer's server.
@@ -51,6 +52,8 @@ internal sealed class ServerController(string dataDirectory) : IDisposable, IAcc
         info.Environment["MUSE_NODE_ID"] = settings.Provider == "muse" ? settings.NodeId : "";
         info.Environment["MUSE_UPSTREAM_PROXY"] = settings.ProxyUrl;
         info.Environment["MUSE_PROXY_API_KEY"] = settings.ApiKey;
+        info.Environment["MUSE_DESK_REQUIRE_KEY"] = "1";
+        info.Environment["MUSE_PROXY_API_KEY_EXPIRES_AT"] = settings.ApiKeyExpiresAt?.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "";
         info.Environment["DECISION_API_KEY"] = DecisionKeys.Load(dataDirectory);
         info.Environment["BIND_ADDR"] = $"127.0.0.1:{settings.Port}";
         info.Environment["MUSE_CONVERSATIONS_PATH"] = ConversationPath(dataDirectory, settings);
@@ -70,6 +73,7 @@ internal sealed class ServerController(string dataDirectory) : IDisposable, IAcc
             process.BeginErrorReadLine();
             for (int attempt = 0; attempt < 75; attempt++)
             {
+                settings.RequireValidApiKey();
                 if (!Running) throw new InvalidOperationException("Proxy không khởi động được. Cổng có thể vừa bị ứng dụng khác sử dụng.");
                 try
                 {
@@ -97,9 +101,11 @@ internal sealed class ServerController(string dataDirectory) : IDisposable, IAcc
     public async Task<int> CheckMuseAsync()
     {
         if (!Running) throw new InvalidOperationException("Bật proxy trước khi kiểm tra Muse.");
+        active!.RequireValidApiKey();
         bool gemini=active!.Provider=="gemini";
         using var request = AuthRequest(HttpMethod.Get, gemini ? "/v1/provider/check" : "/v1/conversations");
         using var response = await http.SendAsync(request);
+        if (response.StatusCode == HttpStatusCode.Unauthorized) active.RequireValidApiKey();
         if (!response.IsSuccessStatusCode)
         {
             throw new InvalidOperationException(gemini ? "Chưa xác thực được Gemini. Kiểm tra proxy và cập nhật __Secure-1PSID/__Secure-1PSIDTS từ gemini.google.com." : "Chưa kết nối được tài khoản Muse. Cookie có thể đã hết hạn; mở Muse, lấy cookie mới rồi Lưu & kết nối lại.");

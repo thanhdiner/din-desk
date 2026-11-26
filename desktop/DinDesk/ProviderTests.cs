@@ -15,11 +15,11 @@ internal static class ProviderTests
         var previous=settings.Copy();
         var account=new MuseAccount {Name="Gemini Fixture",Provider="gemini",Cookie="__Secure-1PSID=fixture-gemini-secret; __Secure-1PSIDTS=fixture-ts",ProxyUrl="http://fixture:private-proxy@127.0.0.1:8080"};
         settings.Accounts.Add(account);string key=settings.ApiKey;settings.SelectAccount(account.Id);
-        Require(settings.Provider=="gemini" && settings.ModelId=="gemini" && settings.Cookie==account.Cookie && settings.ApiKey!=key,"Provider switch mixed model/cookie or retained old API key");
+        Require(settings.Provider=="gemini" && settings.ModelId=="gemini" && settings.Cookie==account.Cookie && settings.ApiKey==key,"Provider switch mixed model/cookie or changed the proxy key");
         Require(ServerController.ConversationPath(root,settings)!=ServerController.ConversationPath(root,previous),"Provider conversation stores overlap");
         var store=new SettingsStore(root);store.Save(settings);var loaded=store.Load();
         Require(loaded.Provider=="gemini" && loaded.Accounts[0].Provider=="muse" && loaded.Accounts[1].Cookie==account.Cookie,"Provider settings did not roundtrip");
-        loaded.SelectAccount(loaded.Accounts[0].Id);Require(loaded.Cookie==previous.Cookie && loaded.ModelId=="muse","Switch back corrupted Muse account");
+        loaded.SelectAccount(loaded.Accounts[0].Id);Require(loaded.Cookie==previous.Cookie && loaded.ModelId=="muse" && loaded.ApiKey==key,"Switch back changed Muse credentials or the proxy key");
         bool rejected=false;try{SettingsStore.ValidateProviderCookie(previous.Cookie,"gemini");}catch(ArgumentException){rejected=true;}
         Require(rejected,"Muse credential accepted as Gemini");
         rejected=false;try{SettingsStore.ValidateProviderCookie("__Secure-1PSID=","gemini");}catch(ArgumentException){rejected=true;}
@@ -28,12 +28,12 @@ internal static class ProviderTests
             rejected=false;try{await quota.FetchAccountAsync(account);}catch(ArgumentException){rejected=true;}
             Require(rejected,"Gemini cookie reached Muse quota client");
         }
-        checks.Add("Provider migration, per-provider cookie/model/key/session isolation, encrypted roundtrip and Gemini quota never calls Muse");
+        checks.Add("Provider migration, per-provider cookie/model/session isolation, stable proxy key and provider-specific quota");
 
         // Probe real embedded Gemini mode through a local account proxy. This
         // asserts no Muse bootstrap/cookie is used, without contacting Google.
         var proxy=new TcpListener(IPAddress.Loopback,0);proxy.Start();
-        using var deadline=new CancellationTokenSource(TimeSpan.FromSeconds(8));
+        using var deadline=new CancellationTokenSource();
         var connect=Task.Run(async()=>{
             using var peer=await proxy.AcceptTcpClientAsync(deadline.Token);var stream=peer.GetStream();var data=new List<byte>();var one=new byte[1];
             while(data.Count<16384 && await stream.ReadAsync(one,deadline.Token)==1){data.Add(one[0]);if(data.Count>=4 && Encoding.ASCII.GetString(data.ToArray()).EndsWith("\r\n\r\n"))break;}
@@ -70,9 +70,10 @@ internal static class ProviderTests
             }finally{if(File.Exists(shim))File.Delete(shim);if(File.Exists(capture))File.Delete(capture);}
             using var http=new HttpClient(new HttpClientHandler{UseProxy=false});
             using var request=new HttpRequestMessage(HttpMethod.Post,$"http://127.0.0.1:{settings.Port}/v1/messages/count_tokens");
-            request.Headers.Authorization=new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer",settings.ApiKey);
+            request.Headers.Authorization=new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer",key);
             request.Content=new StringContent("{\"model\":\"muse\",\"messages\":[{\"role\":\"user\",\"content\":\"check\"}]}",Encoding.UTF8,"application/json");
-            using var response=await http.SendAsync(request);Require(response.StatusCode==HttpStatusCode.BadRequest,"Gemini accepted Muse model");
+            using var response=await http.SendAsync(request);Require(response.StatusCode==HttpStatusCode.BadRequest,"Gemini rejected the original proxy key or accepted the Muse model");
+            deadline.CancelAfter(TimeSpan.FromSeconds(8));
             rejected=false;try{await server.CheckMuseAsync();}catch(InvalidOperationException){rejected=true;}
             var observed=await connect;
             Require(rejected && observed.StartsWith("CONNECT gemini.google.com:443 ") && !observed.Contains("muse.ai") && !observed.Contains("hatch_sess") && !observed.Contains("fixture-gemini-secret"),"Gemini backend leaked cookie or connected to Muse");

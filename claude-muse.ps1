@@ -1,50 +1,12 @@
 # Route this Claude Code process through Muse; restore the terminal afterwards.
 # Start the Rust server with MUSE_COOKIE, MUSE_NODE_ID and MUSE_PROXY_API_KEY first.
-param([switch]$MuseDesk)
+param([switch]$MuseDesk, [string]$DeskDirectory, [switch]$FullAccess)
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'dindesk-connection.ps1')
 
-function Get-MuseDeskConnection {
-    $directory = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'MuseDesk'
-    $settingsPath = Join-Path $directory 'settings.protected'
-    if (-not (Test-Path -LiteralPath $settingsPath)) {
-        throw 'Mo Muse Desk, them tai khoan va ket noi truoc khi chay cy.'
-    }
-    Add-Type -AssemblyName System.Security
-    $plain = $null
-    try {
-        $plain = [Security.Cryptography.ProtectedData]::Unprotect(
-            [IO.File]::ReadAllBytes($settingsPath), $null,
-            [Security.Cryptography.DataProtectionScope]::CurrentUser)
-        $settings = [Text.Encoding]::UTF8.GetString($plain) | ConvertFrom-Json
-        $port = [int]$settings.Port
-        $key = [string]$settings.ApiKey
-        if ($port -lt 1024 -or $port -gt 65535 -or [string]::IsNullOrWhiteSpace($key) -or $key -match '[\r\n]') {
-            throw 'Invalid Muse Desk connection settings.'
-        }
-        # Only send the app's key to its own local Rust child, never to a
-        # different program that happens to occupy the configured port.
-        $listener = Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue |
-            Where-Object LocalAddress -eq '127.0.0.1' | Select-Object -First 1
-        if (-not $listener) { throw 'Muse Desk proxy is not running.' }
-        $owner = Get-Process -Id $listener.OwningProcess -ErrorAction Stop
-        $runtimeRoot = [IO.Path]::GetFullPath((Join-Path $directory 'runtime')) + [IO.Path]::DirectorySeparatorChar
-        if ([string]::IsNullOrEmpty($owner.Path) -or
-            -not $owner.Path.StartsWith($runtimeRoot, [StringComparison]::OrdinalIgnoreCase) -or
-            [IO.Path]::GetFileName($owner.Path) -ne 'muse-api.exe') {
-            throw 'The configured port is not owned by Muse Desk.'
-        }
-        $model = switch ($settings.Provider) { 'gemini' { 'gemini' } default { 'muse' } }
-        return [pscustomobject]@{ Url = "http://127.0.0.1:$port"; Key = $key; Port = $port; Model = $model }
-    } catch {
-        throw 'Chua ket noi duoc proxy cua Muse Desk. Mo app, chon tai khoan va bam Ket noi roi chay lai cy.'
-    } finally {
-        if ($null -ne $plain) { [Array]::Clear($plain, 0, $plain.Length) }
-    }
-}
-
-$claudeCommand = Get-Command claude -ErrorAction Stop
+$claudeCommand = Get-Command claude -CommandType Application,ExternalScript -ErrorAction Stop | Select-Object -First 1
 $contextTokens = 256000
-if ($env:MUSE_CONTEXT_TOKENS) {
+if (-not $MuseDesk -and $env:MUSE_CONTEXT_TOKENS) {
     if (-not [int]::TryParse($env:MUSE_CONTEXT_TOKENS, [ref]$contextTokens) -or $contextTokens -lt 64000 -or $contextTokens -gt 1000000) {
         throw 'MUSE_CONTEXT_TOKENS must be an integer from 64000 to 1000000.'
     }
@@ -52,43 +14,43 @@ if ($env:MUSE_CONTEXT_TOKENS) {
 $proxyUrl = if ($env:MUSE_PROXY_URL) { $env:MUSE_PROXY_URL.TrimEnd('/') } else { 'http://127.0.0.1:3000' }
 $proxyKey = $env:MUSE_PROXY_API_KEY
 $model = if ($env:MUSE_MODEL) { $env:MUSE_MODEL } else { 'muse' }
-if ($model -notin @('muse','gemini')) { throw 'MUSE_MODEL must be muse or gemini.' }
 if ($MuseDesk) {
-    $connection = Get-MuseDeskConnection
+    $connection = Get-DinDeskConnection $DeskDirectory
+    Test-DinDeskConnection $connection
     $proxyUrl = $connection.Url
     $proxyKey = $connection.Key
     $model = $connection.Model
+    $contextTokens = $connection.ContextTokens
 } elseif ([string]::IsNullOrWhiteSpace($proxyKey)) {
     $proxyKey = [Environment]::GetEnvironmentVariable('MUSE_PROXY_API_KEY', 'User')
 }
+if ($model -notin @('muse','gemini')) { throw 'MUSE_MODEL must be muse or gemini.' }
 if ([string]::IsNullOrWhiteSpace($proxyKey)) {
     throw 'Set MUSE_PROXY_API_KEY to the same key as the Rust server before running this launcher.'
 }
 
 # Auth/protocol preflight does not send a chat message or create a Muse session.
 $checkBody = @{ model = $model; messages = @(@{ role = 'user'; content = 'connection check' }) } | ConvertTo-Json -Depth 5 -Compress
-try {
+if (-not $MuseDesk) { try {
     $null = Invoke-RestMethod -Method Post -Uri "$proxyUrl/v1/messages/count_tokens" `
         -Headers @{ Authorization = "Bearer $proxyKey" } `
-        -ContentType 'application/json' -Body $checkBody -TimeoutSec 10
+        -ContentType 'application/json' -Body $checkBody -TimeoutSec 10 -MaximumRedirection 0
 } catch {
     $preflightError = $_
     $recovered = $false
     # Existing terminals still hold the old cy function with a Windows user
     # key. Recover only a 401 from this exact app-owned loopback endpoint.
-    if (-not $MuseDesk -and [int]$_.Exception.Response.StatusCode -eq 401) {
+    if ([int]$_.Exception.Response.StatusCode -eq 401) {
         try {
             $target = [uri]$proxyUrl
             if ($target.Scheme -eq 'http' -and $target.IsLoopback -and $target.AbsolutePath -eq '/' -and -not $target.UserInfo) {
-                $connection = Get-MuseDeskConnection
+                $connection = Get-DinDeskConnection $DeskDirectory
                 if ($target.Port -eq $connection.Port) {
+                    Test-DinDeskConnection $connection
                     $model = $connection.Model
-                    $checkBody = @{ model = $model; messages = @(@{ role = 'user'; content = 'connection check' }) } | ConvertTo-Json -Depth 5 -Compress
-                    $null = Invoke-RestMethod -Method Post -Uri "$($connection.Url)/v1/messages/count_tokens" `
-                        -Headers @{ Authorization = "Bearer $($connection.Key)" } `
-                        -ContentType 'application/json' -Body $checkBody -TimeoutSec 10
                     $proxyUrl = $connection.Url
                     $proxyKey = $connection.Key
+                    $contextTokens = $connection.ContextTokens
                     $recovered = $true
                     Write-Host 'Da dung cau hinh ket noi cua Muse Desk (khoa Windows cu khong con khop).'
                 }
@@ -98,7 +60,7 @@ try {
     if (-not $recovered) {
         throw "Muse proxy preflight failed at $proxyUrl. Neu dung app, mo Muse Desk va ket noi tai khoan, sau do chay cy. $($preflightError.Exception.Message)"
     }
-}
+} }
 
 $overrides = @{
     ANTHROPIC_BASE_URL = $proxyUrl
@@ -127,6 +89,9 @@ $overrides = @{
     DISABLE_PROMPT_CACHING = '1'
     CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = '1'
 }
+if ($MuseDesk) {
+    $overrides.NO_PROXY = (@($env:NO_PROXY, '127.0.0.1', 'localhost') | Where-Object { $_ }) -join ','
+}
 $saved = @{}
 $searchConfigPath = $null
 try {
@@ -153,7 +118,9 @@ try {
     $searchConfigPath = Join-Path ([IO.Path]::GetTempPath()) ("MuseDesk-web-search-" + [Guid]::NewGuid().ToString('N') + '.json')
     [IO.File]::WriteAllText($searchConfigPath, $searchConfig, (New-Object Text.UTF8Encoding($false)))
     Write-Host "Claude Code -> $proxyUrl -> $model | Web search -> Exa MCP"
-    & $claudeCommand.Source --model $model --disallowedTools WebSearch --mcp-config $searchConfigPath @args
+    $options = @('--model', $model, '--disallowedTools', 'WebSearch', '--mcp-config', $searchConfigPath)
+    if ($FullAccess -and '--dangerously-skip-permissions' -notin $args) { $options += '--dangerously-skip-permissions' }
+    & $claudeCommand.Source @options @args
     if ($LASTEXITCODE -ne 0) { throw "Claude Code exited with code $LASTEXITCODE" }
 } finally {
     if ($searchConfigPath -and (Test-Path -LiteralPath $searchConfigPath)) {

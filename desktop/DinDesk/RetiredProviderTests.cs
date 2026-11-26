@@ -43,8 +43,8 @@ internal static class RetiredProviderTests
         WriteOld(settings);
         var migrated = store.Load();
         Require(migrated.ActiveAccountId == null && !migrated.AutoStart && migrated.Cookie == ""
-            && migrated.ProxyUrl == "" && migrated.ApiKey != settings.ApiKey,
-            "Retired active account retained credentials, key or automatic connection");
+            && migrated.ProxyUrl == "" && migrated.ApiKey == settings.ApiKey,
+            "Retired account cleanup retained credentials or auto-start, or changed the proxy key");
         Require(migrated.Accounts.Count == 2 && migrated.Accounts[0].Cookie == muse.Cookie
             && migrated.Accounts[1].Cookie == gemini.Cookie && migrated.Accounts[1].ProxyUrl == gemini.ProxyUrl
             && migrated.Accounts[1].GeminiAccountIndex == 5 && migrated.Accounts[1].GeminiModelId == gemini.GeminiModelId
@@ -61,7 +61,7 @@ internal static class RetiredProviderTests
         }
         finally { CryptographicOperations.ZeroMemory(savedPlain); }
         Require(store.Load().ApiKey == migrated.ApiKey, "Settings migration repeats on subsequent load");
-        checks.Add("Retired active provider removed from DPAPI storage; credentials/key cleared, auto-start off, Muse/Gemini accounts and preferences retained");
+        checks.Add("Retired active provider and credentials removed from DPAPI storage, auto-start off, proxy key and Muse/Gemini accounts retained");
 
         settings.SelectAccount(gemini.Id);
         WriteOld(settings);
@@ -72,8 +72,8 @@ internal static class RetiredProviderTests
         var legacy = new Settings { Provider = "deepseek", Cookie = "fixture-retired-cookie", AutoStart = true };
         WriteOld(legacy);
         var empty = store.Load();
-        Require(empty.Accounts.Count == 0 && empty.ActiveAccountId == null && empty.Cookie == "" && !empty.AutoStart,
-            "Legacy retired cookie was migrated into a supported provider");
+        Require(empty.Accounts.Count == 0 && empty.ActiveAccountId == null && empty.Cookie == "" && !empty.AutoStart
+            && empty.ApiKey == legacy.ApiKey, "Legacy retired settings migrated the cookie or changed the proxy key");
         checks.Add("Inactive provider removal preserves active Gemini and API key; retired legacy cookie cannot become Muse account");
     }
 }

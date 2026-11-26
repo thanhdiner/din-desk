@@ -1,18 +1,36 @@
-# Muse API
+# Din Desk
 
-Muse Desk hỗ trợ chọn **Muse hoặc Gemini Web** trong cùng app, mỗi tài khoản có
-cookie/proxy riêng. Xem [Gemini Web](docs/GEMINI_WEB.md) để thêm tài khoản và xem
-phần đã kiểm chứng; đường Muse hiện có tiếp tục là mặc định.
+Din Desk là ứng dụng Windows chạy proxy cục bộ cho Claude Code, Codex CLI và
+Claude Desktop qua tài khoản **Muse** hoặc **Gemini Web**. Mỗi tài khoản có
+cookie và cấu hình proxy riêng. Din Desk lưu cấu hình bằng Windows DPAPI.
 
-Khung server Rust chạy trên Tokio, dùng Axum WebSocket trực tiếp và Noise qua thư viện `snow`.
+## Tải Din Desk cho Windows
 
-**Muse Desk cho Windows đang ở bước xem trước giao diện**, chưa chốt bản phân
-phối. Bản chạy để xem UI nằm ở `target/desktop-preview-accounts/MuseDesk.exe`; ZIP
-`0.1.0-beta.1` trong `dist` dùng giao diện trước đó. App không cần Rust hay
-.NET cài riêng; Claude Code cần cài riêng. Cấu hình được mã hóa bằng Windows
-DPAPI. Xem [hướng dẫn và giới hạn](docs/WINDOWS_RELEASE.md).
+**v0.1.0-beta.26 · Windows 10/11 x64**
 
-**Claude Code:** đã có adapter Anthropic Messages và launcher
+| Tệp | Nội dung |
+| --- | --- |
+| [Tải ZIP portable](https://github.com/thanhdiner/din-desk/releases/download/v0.1.0-beta.26/DinDesk-0.1.0-beta.26-win-x64.zip) | EXE, hướng dẫn tiếng Việt và giấy phép thư viện |
+| [Tải DinDesk.exe](https://github.com/thanhdiner/din-desk/releases/download/v0.1.0-beta.26/DinDesk.exe) | Chạy trực tiếp với Rust server và .NET runtime tích hợp |
+| [Tải SHA-256 của ZIP](https://github.com/thanhdiner/din-desk/releases/download/v0.1.0-beta.26/DinDesk-0.1.0-beta.26-win-x64.zip.sha256) | Đối chiếu với `Get-FileHash -Algorithm SHA256` |
+
+Đăng nhập GitHub bằng tài khoản có quyền truy cập repo để tải.
+[Xem các bản phát hành](https://github.com/thanhdiner/din-desk/releases).
+
+1. Giải nén ZIP nếu đã tải gói portable, rồi mở `DinDesk.exe`.
+2. Trong **Tài khoản**, thêm tài khoản Muse hoặc Gemini Web và kết nối. Tab
+   **Hướng dẫn** có các bước lấy cookie.
+3. Cài công cụ bạn muốn dùng, rồi mở từ tab **Bắt đầu** hoặc thiết lập CLI ở
+   tab **Cài đặt**. Giữ Din Desk kết nối trong lúc sử dụng.
+
+[Hướng dẫn Windows](docs/WINDOWS_RELEASE.md) · [Thiết lập Gemini Web](docs/GEMINI_WEB.md)
+
+**Claude Desktop trên Windows.** Kết nối tài khoản trong Din Desk, sau đó bấm
+**Bắt đầu → Mở Claude Desktop** một lần. Những lần sau, mở Claude Desktop trực
+tiếp và vào tab **Code** trong khi Din Desk đang kết nối.
+[Hướng dẫn cài đặt và cập nhật cấu hình](docs/CLAUDE_CODE.md#claude-desktop-trên-windows)
+
+**Claude Code CLI:** đã có adapter Anthropic Messages và launcher
 [`claude-muse.ps1`](claude-muse.ps1). Xem [cách cấu hình và giới hạn](docs/CLAUDE_CODE.md).
 Tool calling qua prompt JSON đã thử vòng Read → Write với Muse thật; SSE của
 adapter này đệm nội dung tới khi kiểm tra xong, usage là ước lượng.
@@ -25,6 +43,11 @@ Mỗi ảnh tối đa 2 MiB sau giải mã base64; xem [giới hạn ảnh](docs
 
 Claude Code mở qua launcher có công cụ tìm kiếm web Exa MCP không cần API key
 để bắt đầu (có giới hạn tần suất). Xem [tìm kiếm web](docs/CLAUDE_CODE.md#tìm-kiếm-web).
+
+**Codex CLI** dùng `/v1/responses` với model `muse` hoặc `gemini` và cấu hình
+context từ Din Desk. Trong **Cài đặt**, bấm **Setup Claude Code** hoặc **Setup
+Codex** rồi mở PowerShell mới để dùng `cy` hoặc `cx`. Hai lệnh chạy tại thư mục
+terminal, dùng API key đang lưu và bỏ lời hỏi duyệt thao tác của CLI.
 
 ## Kiến trúc
 
@@ -98,7 +121,7 @@ Mỗi conversation có socket Noise riêng và một khóa tuần tự; tối đ
 - Widget gợi ý nằm trong `choices[0].delta.muse_quick_replies`, gồm `id` và `options`. `delta.content` chỉ chứa text đã bỏ marker `[[hatch_widget:...]]`.
 - `messages`: chấp nhận mảng nhiều message, nhưng **chỉ gửi user message cuối cùng** vào session hiện tại. User content có thể là string hoặc mảng part `text`/`input_text`, giới hạn 32.768 byte. Lịch sử cũ và chỉ dẫn `system`/`developer` không được gửi lại, Muse quản lý history/persona. Nếu không truyền `conversation_id`, lịch sử trong request cũng không được dùng để tái tạo conversation.
 - `tools`, `functions`, tool choice thực sự, ảnh/audio, structured output, custom stop, logprobs và `n != 1`: trả 400 khi được yêu cầu. Các tham số sinh như `temperature`, `top_p`, `max_tokens` và trường lạ khác được bỏ qua cho compatibility, không điều khiển Muse.
-- Confidential VM cần recovery credentials vẫn chưa hỗ trợ. Các route OpenAI/conversation chưa có xác thực đầu vào, vì vậy giữ trên localhost. Hai route Anthropic mới yêu cầu `MUSE_PROXY_API_KEY`; xem [Claude Code](docs/CLAUDE_CODE.md).
+- Confidential VM cần recovery credentials vẫn chưa hỗ trợ. Din Desk yêu cầu API key cho các route API localhost. Xem [cách đổi key và đặt hạn](docs/WINDOWS_RELEASE.md).
 
 Giao thức nội bộ Muse có thể thay đổi. [Tài liệu tham khảo muse-cli](https://github.com/nikships/muse-cli/blob/main/docs/PROTOCOL.md) ghi nhận một số môi trường có thể yêu cầu TLS fingerprint của trình duyệt. Lần kiểm tra trên máy hiện tại sử dụng trực tiếp Rust TLS và không cần trình duyệt chạy kèm.
 

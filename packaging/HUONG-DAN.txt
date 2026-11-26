@@ -1,11 +1,28 @@
-DIN DESK 0.1.0-beta.18 · WINDOWS x64
+DIN DESK · WINDOWS x64
 
-1. Giải nén toàn bộ ZIP vào một thư mục bạn muốn giữ lại.
-2. Mở DinDesk.exe. Không cần cài Rust, .NET hay quyền Administrator.
-3. Đăng nhập tại muse.ai bằng trình duyệt của bạn.
-4. Trong Din Desk, bấm “Cách lấy cookie”, làm theo hướng dẫn, dán cookie.
-5. Bấm “Lưu & kết nối”. Đợi trạng thái “Đã kết nối Muse”.
-6. Chọn thư mục dự án, bấm “Mở Claude Code”.
+1. Nếu tải ZIP, giải nén toàn bộ vào một thư mục bạn muốn giữ lại.
+2. Mở DinDesk.exe. Rust và .NET đã được tích hợp.
+3. Trong Din Desk, vào “Hướng dẫn” để lấy cookie tài khoản Muse hoặc Gemini Web.
+4. Vào “Tài khoản” → “Thêm”, chọn dịch vụ, dán cookie rồi lưu.
+5. Chọn tài khoản và bấm “Kết nối”.
+6. Chọn thư mục dự án, bấm “Mở Claude Code” hoặc “Mở Codex”.
+
+CLAUDE DESKTOP TRÊN WINDOWS
+1. Cài Claude Desktop. Trong Din Desk, kết nối tài khoản Muse hoặc Gemini Web.
+2. Vào “Bắt đầu” và bấm “Mở Claude Desktop”. Din Desk lưu cấu hình gateway
+   rồi mở tab Code. Nếu Desktop đang dùng cấu hình cũ, thoát hẳn và bấm lại.
+3. Từ lần sau, mở Claude Desktop trực tiếp từ menu Start rồi vào tab Code.
+   Giữ Din Desk chạy và kết nối tài khoản trong lúc sử dụng.
+Bấm lại “Mở Claude Desktop” sau khi đổi API key, cổng proxy hoặc chuyển giữa
+Muse và Gemini. Nếu Desktop đang chạy, thoát hẳn rồi mở lại để nhận cấu hình mới.
+
+SETUP CLI
+Cài Claude Code hoặc Codex CLI trước. Trong Cài đặt, bấm “Setup Claude Code”
+hoặc “Setup Codex”. Mở PowerShell mới rồi gõ cy hoặc cx tại thư mục dự án.
+Setup cập nhật lệnh trùng trong profile PowerShell 5.1 và 7, kèm bản sao profile.
+Hai lệnh dùng cấu hình proxy đang lưu trong app và bỏ lời hỏi duyệt thao tác CLI.
+Hàng dưới nút Setup có “Sao lưu cấu hình CLI”, “Khôi phục từ file” và “Reset cấu
+hình CLI”. Giữ file .dindesk-backup để khôi phục trên cùng tài khoản Windows.
 
 CLAUDE CODE
 Gemini Web: Tài khoản -> Thêm -> chọn Gemini Web; dán Cookie có __Secure-1PSID
@@ -22,8 +39,7 @@ Tích hợp Gemini chưa xác minh generation bằng tài khoản Google thật;
 cập nhật khi Google thay đổi giao thức. Không tự fallback anonymous hoặc sang Muse.
 Claude Code cần được cài riêng. Nút “Cài Claude Code” mở hướng dẫn chính thức.
 Din Desk tự tìm Claude Code trên máy và truyền cấu hình riêng cho phiên đó.
-Không cần chỉnh PowerShell profile, biến môi trường hay API key bằng tay.
-Ứng dụng giữ nguyên cơ chế hỏi quyền công cụ của Claude Code.
+Các phiên mở từ Din Desk bỏ lời hỏi duyệt thao tác của CLI.
 Tìm kiếm web dùng Exa MCP thay cho WebSearch tích hợp không tương thích Muse.
 Không cần API key Exa để bắt đầu; có giới hạn tần suất. Truy vấn tìm kiếm được
 gửi sang Exa khi dùng công cụ. Sau khi cập nhật, mở lại phiên Claude để nhận tool.
@@ -35,16 +51,21 @@ Ký tự đặc biệt trong user/password cần URL-encode (ví dụ @ thành %
 Proxy dùng cho xác thực, chat/WebSocket và kiểm tra quota; lỗi thì không tự đi trực tiếp.
 Sửa proxy acc đang chạy sẽ dừng kết nối cũ; bấm Kết nối lại để áp dụng.
 SOCKS5 chưa hỗ trợ. Proxy không bảo đảm tài khoản không bị giới hạn/khóa.
-Giữ Din Desk chạy trong lúc dùng Claude Code. Đóng cửa sổ khi proxy đang chạy
-sẽ thu app xuống khay hệ thống. Nhấp đúp biểu tượng để mở lại. Chọn Thoát để
-dừng server. Khi cookie hết hạn, lấy cookie mới rồi Lưu & kết nối lại.
-Cài đặt nâng cao có nút tạo shortcut Desktop và xuất chẩn đoán.
+Nút X thu Din Desk xuống khay hệ thống và giữ kết nối proxy đang dùng. Mở app
+lại từ menu Start hoặc nhấp đúp biểu tượng khay. Chọn Thoát để dừng server.
+Khi cookie hết hạn, lấy cookie mới rồi Lưu & kết nối lại.
+Tab Cài đặt có nút tạo shortcut Desktop và xuất chẩn đoán.
 
 CẤU HÌNH VÀ DỮ LIỆU
 Cấu hình lưu ở %LOCALAPPDATA%\DinDesk\settings.protected, được mã hóa bằng
 Windows DPAPI cho tài khoản Windows hiện tại. Không chia sẻ cookie hoặc file
 cấu hình. Mỗi người cần tài khoản Muse riêng. Gói ZIP không chứa cookie/API key.
 API mặc định chỉ nghe localhost, cổng 3001. Nếu cổng bận, chọn cổng khác.
+Các route API yêu cầu key. Key mặc định không hết hạn và giữ nguyên khi đổi acc.
+Trong Cài đặt có thể bấm “Đổi API key” hoặc đặt và lưu ngày giờ hết hạn.
+Key hết hạn bị từ chối. Bấm đổi key rồi mở lại cy hoặc cx để nhận key mới.
+Nếu client đọc key từ file .env, bấm “Chọn file .env” trong Cài đặt và lưu tên
+biến (mặc định MUSE_PROXY_API_KEY). Sau khi đổi key, bấm “Cập nhật key vào .env”.
 Để gỡ: thoát app, xóa thư mục đã giải nén và shortcut. Nếu muốn xóa cả cấu hình,
 xóa thêm %LOCALAPPDATA%\DinDesk sau khi đã thoát ứng dụng.
 
@@ -53,8 +74,7 @@ Kết nối tài khoản vẫn cần lấy cookie thủ công, chưa đăng nh�
 Tool calling qua prompt JSON, chưa phải API model native. Tốc độ tùy Muse.
 Context 256k là budget của client, không bảo đảm Muse cá nhân dùng hết được.
 Ảnh PNG/JPEG/GIF/WebP tối đa 2 MiB mỗi ảnh; tổng JSON request tối đa 4 MiB.
-Document/PDF/audio chưa hỗ trợ. API OpenAI/conversation cũ chưa có auth; app
-giữ server ở localhost. Không mở cổng proxy ra mạng bên ngoài.
+Document/PDF/audio chưa hỗ trợ. Proxy Din Desk nghe trên localhost.
 Bản này chưa có chữ ký số, tự cập nhật hay bộ cài hệ thống.
 Windows có thể hiển thị cảnh báo ứng dụng chưa nhận diện khi tải về.
 

@@ -1,0 +1,26 @@
+{
+  "models": [
+    {
+      "slug": "muse",
+      "display_name": "Muse",
+      "description": "Active Din Desk backend",
+      "base_instructions": "You are a coding assistant. Use local tools to inspect the project, make requested changes and verify the result.",
+      "default_reasoning_level": "medium",
+      "supported_reasoning_levels": [{ "effort": "medium", "description": "Configured by Din Desk" }],
+      "shell_type": "unified_exec",
+      "visibility": "list",
+      "supported_in_api": true,
+      "priority": 0,
+      "context_window": 256000,
+      "max_context_window": 256000,
+      "truncation_policy": { "mode": "tokens", "limit": 10000 },
+      "supports_reasoning_summary_parameter": false,
+      "support_verbosity": false,
+      "experimental_supported_tools": [],
+      "input_modalities": ["text", "image"],
+      "apply_patch_tool_type": "freeform",
+      "supports_search_tool": false,
+      "node_repl_disabled": true
+    }
+  ]
+}
