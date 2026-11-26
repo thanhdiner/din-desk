@@ -1,6 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="152" height="36" viewBox="0 0 152 36" role="img" aria-labelledby="title">
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="26" viewBox="0 0 108 26" role="img" aria-labelledby="title">
   <title id="title">Tải DinDesk.exe</title>
-  <rect width="152" height="36" rx="8" fill="#80E7DA"/>
-  <path d="M13 13l5 5-5 5m8 0h5" fill="none" stroke="#112D2A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="35" y="18" dominant-baseline="central" fill="#112D2A" font-family="Segoe UI, sans-serif" font-size="14" font-weight="700">DinDesk.exe</text>
+  <path fill="#9AE9C8" d="M0 0h108v26H0z"/>
+  <path fill="#25483C" d="M0 0h25v26H0z"/>
+  <path d="M7 9l4 4-4 4m7 0h5" fill="none" stroke="#fff" stroke-width="1.5"/>
+  <text x="32" y="17" fill="#142B23" font-family="monospace" font-size="10.5" font-weight="700">DINDESK.EXE</text>
 </svg>

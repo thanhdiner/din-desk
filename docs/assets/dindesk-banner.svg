@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1056" height="224" viewBox="0 0 66 14" role="img" aria-labelledby="title" shape-rendering="crispEdges">
+  <title id="title">Din Desk</title>
+  <defs>
+    <path id="d" fill-rule="evenodd" d="M0 0h5v1h1v1h1v5H6v1H5v1H0zm2 2v5h3V2z"/>
+    <path id="i" d="M0 0h7v2H4.5v5H7v2H0V7h2.5V2H0z"/>
+    <path id="n" d="M0 0h2v1h1v2h1v2h1V0h2v9H5V8H4V6H3V4H2v5H0z"/>
+    <path id="e" d="M0 0h7v2H2v1.5h4v2H2V7h5v2H0z"/>
+    <path id="s" d="M1 0h6v2H2v1.5h4v1h1V8H6v1H0V7h5V5.5H1v-1H0V1h1z"/>
+    <path id="k" d="M0 0h2v3h1V2h1V1h1V0h2v2H6v1H5v1H4v1h1v1h1v1h1v2H5V8H4V7H3V6H2v3H0z"/>
+    <g id="din">
+      <use href="#d"/>
+      <use href="#i" x="8"/>
+      <use href="#n" x="16"/>
+    </g>
+    <g id="desk">
+      <use href="#d"/>
+      <use href="#e" x="8"/>
+      <use href="#s" x="16"/>
+      <use href="#k" x="24"/>
+    </g>
+  </defs>
+  <path fill="#171323" d="M0 0h66v14H0z"/>
+  <use href="#din" x="4.5" y="2.75" fill="#7253A8"/>
+  <use href="#desk" x="31.5" y="2.75" fill="#428872"/>
+  <use href="#din" x="4" y="2" fill="#DAC5FF"/>
+  <use href="#desk" x="31" y="2" fill="#9AE9C8"/>
+</svg>
